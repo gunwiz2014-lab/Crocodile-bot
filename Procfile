@@ -1,1 +1,1 @@
-worker: python crocodile_bot.py
+worker: python main.py
