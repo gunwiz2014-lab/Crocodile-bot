@@ -992,4 +992,4 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             hidden=[c for c in game["word"] if c not in game["guessed"] and c!=" "]
             if not hidden: await query.answer("Все открыты!",show_alert=True); return
             letter=random.choice(hidden); game["guessed"].add(letter); p["total_score"]-=price
-            await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})\n\n
+            await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})\n\n", parse_mode="Markdown")
