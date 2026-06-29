@@ -993,3 +993,45 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if not hidden: await query.answer("Все открыты!",show_alert=True); return
             letter=random.choice(hidden); game["guessed"].add(letter); p["total_score"]-=price
             await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})\n\n", parse_mode="Markdown")
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
+    app.add_handler(CommandHandler("profile", cmd_profile))
+    app.add_handler(CommandHandler("achievements", cmd_achievements))
+    app.add_handler(CommandHandler("inventory", cmd_inventory))
+    app.add_handler(CommandHandler("daily", cmd_daily))
+    app.add_handler(CommandHandler("scores", cmd_scores))
+    app.add_handler(CommandHandler("shop", cmd_shop))
+    app.add_handler(CommandHandler("bar", cmd_bar))
+    app.add_handler(CommandHandler("farm", cmd_farm))
+    app.add_handler(CommandHandler("game", cmd_game))
+    app.add_handler(CommandHandler("wheel", cmd_wheel))
+    app.add_handler(CommandHandler("speedrun", cmd_speedrun))
+    app.add_handler(CommandHandler("trivia", cmd_trivia))
+    app.add_handler(CommandHandler("hangman", cmd_hangman))
+    app.add_handler(CommandHandler("number", cmd_number))
+    app.add_handler(CommandHandler("blackjack", cmd_blackjack))
+    app.add_handler(CommandHandler("slots", cmd_slots))
+    app.add_handler(CommandHandler("tod", cmd_tod))
+    app.add_handler(CommandHandler("duel", cmd_duel))
+    app.add_handler(CommandHandler("roulette", cmd_roulette))
+    app.add_handler(CommandHandler("dice", cmd_dice))
+    app.add_handler(CommandHandler("uno", cmd_uno))
+    app.add_handler(CommandHandler("poker", cmd_poker))
+    app.add_handler(CommandHandler("tournament", cmd_tournament))
+    app.add_handler(CommandHandler("math", cmd_math))
+    app.add_handler(CommandHandler("join", cmd_join))
+    app.add_handler(CommandHandler("stopbot", cmd_stopbot))
+
+    app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(ChatMemberHandler(greet_new_group, ChatMemberHandler.MY_CHAT_MEMBER))
+
+    app.post_init = setup_commands
+
+    print("Bot starting...")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    main()
