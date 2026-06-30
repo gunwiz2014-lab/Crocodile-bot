@@ -993,7 +993,120 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if not hidden: await query.answer("Все открыты!",show_alert=True); return
             letter=random.choice(hidden); game["guessed"].add(letter); p["total_score"]-=price
             await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})\n\n", parse_mode="Markdown")
-def main():
+def main():async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text: return
+    chat_id = update.effective_chat.id; user = update.effective_user
+    text = update.message.text.strip().lower()
+    p = get_player(user.id, user.first_name)
+
+    # Математика
+    if ctx.chat_data.get("math_active") and text.lstrip("-").isdigit():
+        if text == ctx.chat_data.get("math_answer"):
+            ctx.chat_data["math_active"] = False
+            add_score(user.id, user.first_name, 80)
+            await update.message.reply_text(f"🎉 *Верно!* +80 оч!\n💰 Всего: {p['total_score']}", parse_mode="Markdown")
+        return
+
+    # Угадай число
+    game = number_games.get(chat_id)
+    if game and game.get("active") and text.lstrip("-").isdigit():
+        guess = int(text)
+        if guess == game["number"]:
+            game["active"] = False
+            if game.get("timer_task"): game["timer_task"].cancel()
+            add_score(user.id, user.first_name, 100); p["wins"] += 1
+            await update.message.reply_text(f"🎉 *{user.first_name}* угадал(а)! Число: {game['number']}\n+100 оч!\n\n🔢 /number", parse_mode="Markdown")
+        elif guess < game["number"]:
+            await update.message.reply_text("⬆️ Больше!")
+        else:
+            await update.message.reply_text("⬇️ Меньше!")
+        return
+
+    # Крокодил — угадывание слова (любой, кроме объясняющего)
+    game = games.get(chat_id)
+    if game and game.get("active") and user.id != game["explainer_id"]:
+        if text == game["word"]:
+            game["active"] = False
+            if game.get("timer_task"): game["timer_task"].cancel()
+            add_score(user.id, user.first_name, 150); p["wins"] += 1
+            add_score(game["explainer_id"], game["explainer_name"], 50)
+            await update.message.reply_text(f"🎉 *{user.first_name}* угадал(а)! Слово: *{game['word'].upper()}*\n+150 оч! (объясняющему +50)\n\n🐊 /game", parse_mode="Markdown")
+            return
+
+    # Поле чудес — буква или слово
+    game = wheel_games.get(chat_id)
+    if game and game.get("active") and game.get("drum_value") is not None:
+        if len(text) == 1 and text.isalpha():
+            letter = text
+            if letter in game["word"]:
+                mult = 2 if game["drum_value"] == "x2" else 1
+                value = 100 if game["drum_value"] == "x2" else game["drum_value"]
+                count = game["word"].count(letter)
+                points = value * count * mult
+                game["guessed"].add(letter)
+                game["round_scores"][user.id] = game["round_scores"].get(user.id, 0) + points
+                game["drum_value"] = None
+                shown = display_word(game["word"], game["guessed"])
+                if "_" not in shown.replace(" ", ""):
+                    game["active"] = False
+                    if game.get("timer_task"): game["timer_task"].cancel()
+                    total = game["round_scores"].get(user.id, 0) + 500
+                    add_score(user.id, user.first_name, total); p["wins"] += 1
+                    await update.message.reply_text(f"🎉 *{user.first_name}* отгадал(а) слово целиком!\nСлово: *{game['word'].upper()}*\n+{total} оч!\n\n🎡 /wheel", parse_mode="Markdown")
+                else:
+                    await update.message.reply_text(f"✅ Буква *{letter.upper()}* есть! +{points} оч\nСлово: `{shown}`", parse_mode="Markdown", reply_markup=make_wheel_kb())
+            else:
+                game["wrong_letters"].add(letter); game["drum_value"] = None
+                add_score(user.id, user.first_name, -100)
+                await update.message.reply_text(f"❌ Буквы *{letter.upper()}* нет! -100 оч\nСлово: `{display_word(game['word'], game['guessed'])}`", parse_mode="Markdown", reply_markup=make_wheel_kb())
+        elif len(text) > 1:
+            if text == game["word"]:
+                game["active"] = False
+                if game.get("timer_task"): game["timer_task"].cancel()
+                total = game["round_scores"].get(user.id, 0) + 500
+                add_score(user.id, user.first_name, total); p["wins"] += 1
+                await update.message.reply_text(f"🎉 *{user.first_name}* отгадал(а) слово!\n+{total} оч!\n\n🎡 /wheel", parse_mode="Markdown")
+            else:
+                add_score(user.id, user.first_name, -150)
+                await update.message.reply_text(f"❌ Неверно! -150 оч\n\n🎡 /wheel", parse_mode="Markdown")
+        return
+
+    # Виселица
+    game = hangman_games.get(chat_id)
+    if game and game.get("active") and len(text) == 1 and text.isalpha():
+        letter = text
+        if letter not in game["guessed"]:
+            game["guessed"].add(letter)
+            if letter in game["word"]:
+                add_score(user.id, user.first_name, 50)
+                shown = display_word(game["word"], game["guessed"])
+                if "_" not in shown.replace(" ", ""):
+                    game["active"] = False
+                    if game.get("timer_task"): game["timer_task"].cancel()
+                    add_score(user.id, user.first_name, 200); p["wins"] += 1
+                    await update.message.reply_text(f"🎉 *{user.first_name}* отгадал(а) слово: *{game['word'].upper()}*!\n+250 оч всего!\n\n📝 /hangman", parse_mode="Markdown")
+                else:
+                    await update.message.reply_text(f"✅ Буква есть! +50\nСлово: `{shown}`", parse_mode="Markdown")
+            else:
+                game["errors"] += 1
+                pic_idx = min(game["errors"], len(HANGMAN_PICS) - 1)
+                if game["errors"] >= game["max_errors"]:
+                    game["active"] = False
+                    if game.get("timer_task"): game["timer_task"].cancel()
+                    await update.message.reply_text(f"{HANGMAN_PICS[-1]} *Проигрыш!* Слово было: *{game['word'].upper()}*\n\n📝 /hangman", parse_mode="Markdown")
+                else:
+                    await update.message.reply_text(f"{HANGMAN_PICS[pic_idx]} Нет такой буквы! Осталось попыток: {game['max_errors']-game['errors']}\nСлово: `{display_word(game['word'], game['guessed'])}`", parse_mode="Markdown")
+        return
+
+    # Спидран
+    game = speed_games.get(chat_id)
+    if game and game.get("active") and user.id == game["player_id"]:
+        if text == game["word"]:
+            game["count"] += 1
+            game["word"] = random.choice(SPEEDRUN_WORDS)
+            await update.message.reply_text(f"✅ Верно! Дальше: `{'_ '*len(game['word'])}` ({len(game['word'])} букв)")
+        return
+    
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", cmd_start))
@@ -1025,7 +1138,7 @@ def main():
     app.add_handler(CommandHandler("join", cmd_join))
     app.add_handler(CommandHandler("stopbot", cmd_stopbot))
 
-    app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(CallbackQueryHandler(callback_handler))app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(ChatMemberHandler(greet_new_group, ChatMemberHandler.MY_CHAT_MEMBER))
 
     app.post_init = setup_commands
