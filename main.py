@@ -993,7 +993,8 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if not hidden: await query.answer("Все открыты!",show_alert=True); return
             letter=random.choice(hidden); game["guessed"].add(letter); p["total_score"]-=price
             await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})\n\n", parse_mode="Markdown")
-def main():async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+def main():
+    async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
     chat_id = update.effective_chat.id; user = update.effective_user
     text = update.message.text.strip().lower()
@@ -1106,7 +1107,6 @@ def main():async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE)
             game["word"] = random.choice(SPEEDRUN_WORDS)
             await update.message.reply_text(f"✅ Верно! Дальше: `{'_ '*len(game['word'])}` ({len(game['word'])} букв)")
         return
-    
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", cmd_start))
