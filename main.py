@@ -992,9 +992,102 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             hidden=[c for c in game["word"] if c not in game["guessed"] and c!=" "]
             if not hidden: await query.answer("Все открыты!",show_alert=True); return
             letter=random.choice(hidden); game["guessed"].add(letter); p["total_score"]-=price
-            await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})\n\n", parse_mode="Markdown")
-def main():
-    async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+            await reply(f"💡 *{user.first_name}* открывает *{letter.upper()}* (-{price})", parse_mode="Markdown")
+        elif key=="protection":
+            p["total_score"]-=price; p["protection"]=True
+            await reply(f"🛡 *{user.first_name}* активировал защиту от банкрота!", parse_mode="Markdown")
+        elif key=="double":
+            p["total_score"]-=price; p["double"]=True
+            await reply(f"🎯 *{user.first_name}* активировал удвоение следующей буквы!", parse_mode="Markdown")
+        elif key=="sabotage":
+            p["total_score"]-=price
+            await reply(f"💣 *{user.first_name}* приготовил диверсию! (эффект применится в следующем ходе соперника)", parse_mode="Markdown")
+        elif key=="crown":
+            p["total_score"]-=price
+            p["crown_until"]=(date.today()+timedelta(days=1)).isoformat()
+            await reply(f"💎 *{user.first_name}* получил временную корону на 24ч!", parse_mode="Markdown")
+        elif key in ("color_red","color_blue","color_green","color_purple","color_gold","color_rainbow"):
+            colors={"color_red":"🔴","color_blue":"🔵","color_green":"🟢","color_purple":"🟣","color_gold":"🟡","color_rainbow":"🌈"}
+            p["total_score"]-=price; p["nick_color"]=colors[key]
+            await reply(f"{colors[key]} *{user.first_name}* сменил цвет ника!", parse_mode="Markdown")
+        elif key=="extra_life":
+            p["total_score"]-=price; p["extra_life"]=True
+            await reply(f"❤️ *{user.first_name}* получил доп. жизнь в виселице!", parse_mode="Markdown")
+        elif key=="time_bonus":
+            p["total_score"]-=price; p["time_bonus"]=True
+            await reply(f"⏱ *{user.first_name}* получил доп. время в следующей игре!", parse_mode="Markdown")
+        elif key=="double_daily":
+            p["total_score"]-=price; p["double_daily"]=True
+            await reply(f"🎁 *{user.first_name}* удвоит следующий ежедневный бонус!", parse_mode="Markdown")
+        elif key=="score_boost":
+            p["total_score"]-=price; p["score_boost"]=True
+            await reply(f"⚡ *{user.first_name}* активировал бустер x1.5!", parse_mode="Markdown")
+        elif key=="multiplier":
+            p["total_score"]-=price; p["multiplier"]=True
+            await reply(f"✖️ *{user.first_name}* активировал множитель x3!", parse_mode="Markdown")
+        elif key=="lottery":
+            p["total_score"]-=price; win=random.randint(50,500); add_score(user.id,user.first_name,win)
+            await reply(f"🎟 *{user.first_name}* играет в лотерею!\n\n🎉 Выигрыш: +{win} оч!", parse_mode="Markdown")
+        elif key=="poison":
+            p["total_score"]-=price
+            await reply(f"🧪 *{user.first_name}* приготовил яд! Используй его в дуэли или против соперника.", parse_mode="Markdown")
+        elif key=="steal":
+            p["total_score"]-=price
+            await reply(f"💰 *{user.first_name}* готов к ограблению! (требуется цель в групповом чате)", parse_mode="Markdown")
+        elif key=="freeze":
+            p["total_score"]-=price
+            await reply(f"❄️ *{user.first_name}* приготовил заморозку для соперника!", parse_mode="Markdown")
+        elif key=="mirror":
+            p["total_score"]-=price; p["mirror"]=True
+            await reply(f"🪞 *{user.first_name}* активировал зеркало — отразит следующую атаку!", parse_mode="Markdown")
+        elif key=="shield":
+            p["total_score"]-=price
+            p["shield_until"]=(date.today()+timedelta(days=1)).isoformat()
+            await reply(f"🛡 *{user.first_name}* получил щит на 24 часа!", parse_mode="Markdown")
+        elif key=="mystery_box":
+            p["total_score"]-=price
+            possible=["protection","double","extra_life","time_bonus","hint"]
+            won=random.choice(possible)
+            p["inventory"][won]=p["inventory"].get(won,0)+1
+            name_w=SHOP_ITEMS[won][1]
+            await reply(f"📦 *{user.first_name}* открывает тайный ящик!\n\n🎉 Внутри: {SHOP_ITEMS[won][0]} {name_w}!", parse_mode="Markdown")
+        elif key=="fortune":
+            p["total_score"]-=price
+            await reply(f"🔮 *{user.first_name}* заглянул в будущее... удача на твоей стороне в следующей игре!", parse_mode="Markdown")
+        elif key=="booster_top":
+            p["total_score"]-=price
+            await reply(f"🚀 *{user.first_name}* поднялся в топе таблицы лидеров!", parse_mode="Markdown")
+        elif key=="sale_pack":
+            p["total_score"]-=price; p["protection"]=True; p["double"]=True; p["extra_life"]=True
+            await reply(f"🎉 *{user.first_name}* получил пакет скидок: Защита + Удвоение + Жизнь!", parse_mode="Markdown")
+        elif key=="starter_pack":
+            p["total_score"]-=price; p["score_boost"]=True
+            win=random.randint(50,500)*3; add_score(user.id,user.first_name,win)
+            await reply(f"🎯 *{user.first_name}* получил стартовый пакет!\n+{win} оч (лотерея x3) + бустер активирован!", parse_mode="Markdown")
+        elif key=="vip_pack":
+            p["total_score"]-=price; p["vip"]=True
+            p["crown_until"]=(date.today()+timedelta(days=1)).isoformat()
+            p["nick_color"]="🌈"; p["achievements"].add("vip_buyer")
+            await reply(f"👑 *{user.first_name}* получил VIP Пакет: VIP + Корона + Радужный ник!", parse_mode="Markdown")
+        elif key=="farm_boost":
+            p["total_score"]-=price
+            p["farm_boost_until"]=(date.today()+timedelta(days=1)).isoformat()
+            await reply(f"🌾 *{user.first_name}* активировал бустер фермы x2 на 24ч!", parse_mode="Markdown")
+        elif key=="bar_vip":
+            pass
+        elif key=="energy_pack":
+            p["total_score"]-=price; p["score_boost"]=True
+            p["bar_drinks"]=p.get("bar_drinks",0)+10
+            check_achievements(user.id,user.first_name)
+            await reply(f"⚡ *{user.first_name}* получил энергопак: 10 энергетиков + бустер!", parse_mode="Markdown")
+        else:
+            p["total_score"]-=price
+            await reply(f"✅ *{user.first_name}* купил *{name}*!", parse_mode="Markdown")
+
+
+# ══════════ ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (ответы в играх) ════════════════════
+
+async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
     chat_id = update.effective_chat.id; user = update.effective_user
     text = update.message.text.strip().lower()
@@ -1107,6 +1200,43 @@ def main():
             game["word"] = random.choice(SPEEDRUN_WORDS)
             await update.message.reply_text(f"✅ Верно! Дальше: `{'_ '*len(game['word'])}` ({len(game['word'])} букв)")
         return
+
+    # Викторина
+    game = trivia_games.get(chat_id)
+    if game and game.get("active"):
+        if text == game["answer"].lower():
+            game["active"] = False
+            if game.get("timer_task"): game["timer_task"].cancel()
+            add_score(user.id, user.first_name, game["pts"]); p["wins"] += 1
+            if game["pts"] >= 300: p["achievements"].add("trivia_hard")
+            await update.message.reply_text(f"🎉 *{user.first_name}* ответил(а) верно!\n+{game['pts']} оч!\n\n🧠 /trivia", parse_mode="Markdown")
+        return
+
+    # УНО — ход картой по названию
+    game = uno_games.get(chat_id)
+    if game and game.get("active"):
+        curr_id = game["players"][game["current"] % len(game["players"])][0]
+        if user.id == curr_id:
+            hand = game["hands"].get(user.id, [])
+            for card in hand:
+                if card.lower() == text:
+                    if uno_card_matches(card, game["top_card"]):
+                        hand.remove(card)
+                        game["top_card"] = card
+                        if not hand:
+                            game["active"] = False
+                            add_score(user.id, user.first_name, 300); p["wins"] += 1
+                            p["achievements"].add("uno_win")
+                            await update.message.reply_text(f"🎉🎴 *{user.first_name}* выиграл(а) УНО!\n+300 оч!", parse_mode="Markdown")
+                            return
+                        game["current"] = (game["current"] + game["direction"]) % len(game["players"])
+                        await update.message.reply_text(f"🎴 *{user.first_name}* сыграл(а): {card}\nВерхняя карта: {game['top_card']}\nКарт осталось: {len(hand)}", parse_mode="Markdown")
+                    else:
+                        await update.message.reply_text("❌ Эта карта не подходит!")
+                    return
+
+
+def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", cmd_start))
@@ -1138,7 +1268,8 @@ def main():
     app.add_handler(CommandHandler("join", cmd_join))
     app.add_handler(CommandHandler("stopbot", cmd_stopbot))
 
-    app.add_handler(CallbackQueryHandler(callback_handler))app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(ChatMemberHandler(greet_new_group, ChatMemberHandler.MY_CHAT_MEMBER))
 
     app.post_init = setup_commands
